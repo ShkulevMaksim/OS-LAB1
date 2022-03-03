@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <iostream>
 #define button_word 1
 #define button_run 2
 #define button_end 3
@@ -10,6 +11,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
     auto CLASS_NAME  = "Window Class";
     WNDCLASS wc = { };
+
     wc.lpfnWndProc   = WindowProc;
     wc.hInstance     = hInstance;
     wc.lpszClassName = CLASS_NAME;
@@ -18,6 +20,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
     // Create the window.
     int windowWidth = 800;
     int windowHeight = 600;
+
     HWND hwnd = CreateWindowEx(
             0,
             CLASS_NAME,
@@ -35,7 +38,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
     }
     int buttonWidth = 100;
     int buttonHeight = 50;
-    HWND hwndButton1 = CreateWindow( //Кнопка для запуска ворда
+    HWND hwndButton1 = CreateWindow(
             "BUTTON",
             "Run Word",
             WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
@@ -102,6 +105,11 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+    STARTUPINFO si;
+    PROCESS_INFORMATION pi;
+    ZeroMemory( &si, sizeof(si) );
+    si.cb = sizeof(si);
+    ZeroMemory( &pi, sizeof(pi) );;
     switch (uMsg)
     {
         case WM_COMMAND:
@@ -109,11 +117,52 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             if(wParam == button_word)
             {
                 ShellExecute(nullptr, "open","text.docx",  nullptr, nullptr, SW_RESTORE);
+                return DefWindowProc(hwnd, uMsg, wParam, lParam);
             }
+            else{
+                if(wParam == button_run)
+                {
+                    if(CreateProcess(nullptr,(LPSTR)"subprocess.exe", nullptr, nullptr, false, DETACHED_PROCESS ,
+                                     nullptr, nullptr, &si, &pi)){
+                        CloseHandle(pi.hThread);
+                        return DefWindowProc(hwnd, uMsg, wParam, lParam);
+                    } else{
+                        printf( "CreateProcess failed (%lu).\n", GetLastError() );
+                        return DefWindowProc(hwnd, uMsg, wParam, lParam);
+                    }
+
+
+            }
+                else{
+                    if(wParam == button_close){
+                        PostQuitMessage(0);
+                        return 0;
+                    }
+                    else {
+                        if(wParam == button_end){
+                            TerminateProcess(pi.hProcess,0);
+                            CloseHandle(pi.hThread);
+                            return DefWindowProc(hwnd, uMsg, wParam, lParam);
+                        }
+                    }
+                }
+
+
+            }
+
+
         }
+        case WM_CLOSE:
+            if (MessageBox(hwnd, "Really quit?", "My application", MB_OKCANCEL) == IDOK)
+            {
+                DestroyWindow(hwnd);
+            }
+
+            return 0;
         case WM_DESTROY:
             PostQuitMessage(0);
             return 0;
+
 
         case WM_PAINT:
         {
@@ -122,8 +171,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             FillRect(hdc, &ps.rcPaint, (HBRUSH) (COLOR_WINDOW+1));
             EndPaint(hwnd, &ps);
         }
-            return 0;
+        default:{
+            return DefWindowProc(hwnd, uMsg, wParam, lParam);
+        }
     }
 
-    return DefWindowProc(hwnd, uMsg, wParam, lParam);
+
+
 }
