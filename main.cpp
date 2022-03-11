@@ -82,7 +82,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 }
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
+INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+                   PSTR lpCmdLine, INT nCmdShow)
 {
     auto CLASS_NAME  = "Window Class";
     WNDCLASS wc = { };
