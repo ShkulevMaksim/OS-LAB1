@@ -8,12 +8,10 @@ std::vector<PROCESS_INFORMATION> processes;
 std::vector<STARTUPINFO> startupInfo;
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-
     switch (uMsg)
     {
         case WM_COMMAND:
         {
-
             if(wParam == button_word)
             {
                 ShellExecute(nullptr, "open","text.docx",  nullptr, nullptr, SW_RESTORE);
@@ -22,16 +20,13 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             else{
                 if(wParam == button_run)
                 {
-                    STARTUPINFO si;
-                    PROCESS_INFORMATION pi;
-                    ZeroMemory( &si, sizeof(si) );
+                    STARTUPINFO si={0};
+                    PROCESS_INFORMATION pi={nullptr};
                     si.cb = sizeof(si);
-                    ZeroMemory( &pi, sizeof(pi) );
-                    processes.push_back(pi);
-                    startupInfo.push_back(si);
-
                     if(CreateProcess(nullptr,(LPSTR)"subprocess.exe", nullptr, nullptr, false, DETACHED_PROCESS ,
                                      nullptr, nullptr, &si, &pi)){
+                        processes.push_back(pi);
+                        startupInfo.push_back(si);
                         CloseHandle(pi.hThread);
                         return DefWindowProc(hwnd, uMsg, wParam, lParam);
                     } else{
@@ -46,7 +41,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                     }
                     else {
                         if(wParam == button_end){
-                            while(!processes.empty()){
+                            if(!processes.empty()){
                                 TerminateProcess(processes.back().hProcess,-1);
                                 CloseHandle(processes.back().hProcess);
                                 processes.pop_back();
@@ -89,7 +84,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
 {
-
     auto CLASS_NAME  = "Window Class";
     WNDCLASS wc = { };
 
