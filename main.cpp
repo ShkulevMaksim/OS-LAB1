@@ -1,13 +1,32 @@
 #include <windows.h>
 #include <vector>
+
 #define button_word 1
 #define button_run 2
 #define button_end 3
 #define button_close 4
-std::vector<PROCESS_INFORMATION> processes;
-std::vector<STARTUPINFO> startupInfo;
+#define IDT_TIMER1 5
+
+std::vector<HANDLE> process_handles;
+
+
+bool isActive (HANDLE process){
+    DWORD exitcode;
+    GetExitCodeProcess(process, &exitcode);
+    if (exitcode==STILL_ACTIVE){
+        return true;
+    }
+    else{
+        return false;
+    }
+
+}
+
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+
+
+
     switch (uMsg)
     {
         case WM_COMMAND:
@@ -25,8 +44,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                     si.cb = sizeof(si);
                     if(CreateProcess(nullptr,(LPSTR)"subprocess.exe", nullptr, nullptr, false, DETACHED_PROCESS ,
                                      nullptr, nullptr, &si, &pi)){
-                        processes.push_back(pi);
-                        startupInfo.push_back(si);
+                        process_handles.push_back(pi.hProcess);
                         CloseHandle(pi.hThread);
                         return DefWindowProc(hwnd, uMsg, wParam, lParam);
                     } else{
@@ -36,16 +54,20 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 }
                 else{
                     if(wParam == button_close){
+                        while(!process_handles.empty()){
+                            TerminateProcess(process_handles.back(), -1);
+                            CloseHandle(process_handles.back());
+                            process_handles.pop_back();
+                        }
                         PostQuitMessage(0);
                         return 0;
                     }
                     else {
                         if(wParam == button_end){
-                            if(!processes.empty()){
-                                TerminateProcess(processes.back().hProcess,-1);
-                                CloseHandle(processes.back().hProcess);
-                                processes.pop_back();
-                                startupInfo.pop_back();
+                            if(!process_handles.empty()){
+                                    TerminateProcess(process_handles.back(), -1);
+                                CloseHandle(process_handles.back());
+                                process_handles.pop_back();
                                 return DefWindowProc(hwnd, uMsg, wParam, lParam);
                             }
 
@@ -73,6 +95,20 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             FillRect(hdc, &ps.rcPaint, (HBRUSH) (COLOR_WINDOW+1));
             EndPaint(hwnd, &ps);
         }
+        case WM_TIMER:
+        {
+            if(!process_handles.empty()){
+                for(auto it=process_handles.begin();it!=process_handles.end();){
+                    if (!isActive(*it)){
+                      it=    process_handles.erase(it);
+                    }
+                    else{
+                        ++it;
+                    }
+
+                }
+            }
+        }
         default:{
             return DefWindowProc(hwnd, uMsg, wParam, lParam);
         }
@@ -93,7 +129,6 @@ INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     wc.lpszClassName = CLASS_NAME;
     RegisterClass(&wc);
 
-    // Create the window.
     int windowWidth = 800;
     int windowHeight = 600;
 
@@ -112,8 +147,8 @@ INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     {
         return 0;
     }
-    int buttonWidth = 100;
-    int buttonHeight = 50;
+    const int buttonWidth = 100;
+    const int buttonHeight = 50;
     HWND hwndButtonWord = CreateWindow(
             "BUTTON",
             "Run Word",
@@ -168,6 +203,10 @@ INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
 
     ShowWindow(hwnd, nCmdShow);
+    SetTimer(hwnd,
+             IDT_TIMER1,
+             100,
+             (TIMERPROC) nullptr);
 
     MSG msg = { };
     while (GetMessage(&msg, nullptr, 0, 0))
